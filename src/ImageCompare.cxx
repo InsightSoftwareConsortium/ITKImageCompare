@@ -1,7 +1,20 @@
-#include "itkWin32Header.h"
-#include <iostream>
-#include <fstream>
-#include "itkNumericTraits.h"
+/*=========================================================================
+ *
+ *  Copyright Insight Software Consortium
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *=========================================================================*/
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
@@ -9,7 +22,8 @@
 #include "itkExtractImageFilter.h"
 #include "itkTestingComparisonImageFilter.h"
 
-using namespace std;
+#include <iostream>
+#include <fstream>
 
 #define ITK_TEST_DIMENSION_MAX 6
 
@@ -19,10 +33,10 @@ int main(int argc, char **argv)
 {
   if(argc < 3)
     {
-    cerr << "Usage:" << endl;
-    cerr << "testImage, baselineImage1, [baselineImage2, baselineImage3, ...]" << endl;
-    cerr << "Note that if you supply more than one baselineImage, this test will pass if any" << endl;
-    cerr << "of them match the testImage" << endl;
+    std::cerr << "Usage:" << std::endl;
+    std::cerr << "testImage, baselineImage1, [baselineImage2, baselineImage3, ...]" << std::endl;
+    std::cerr << "Note that if you supply more than one baselineImage, this test will pass if any" << std::endl;
+    std::cerr << "of them match the testImage" << std::endl;
     return -1;
     }
   int bestBaselineStatus = 2001;
@@ -35,10 +49,9 @@ int main(int argc, char **argv)
       }
     else
       {
-      int currentStatus = 2001;
       for(int i=2;i<argc;i++)
         {
-        currentStatus = RegressionTestImage(argv[1], argv[i], 0, false);
+        const int currentStatus = RegressionTestImage(argv[1], argv[i], 0, false);
         if(currentStatus < bestBaselineStatus)
           {
           bestBaselineStatus = currentStatus;
@@ -61,14 +74,13 @@ int main(int argc, char **argv)
       }
 
     }
-  catch(const itk::ExceptionObject& e)
+  catch(itk::ExceptionObject& e)
     {
     std::cerr << "ITK test driver caught an ITK exception:\n";
-    std::cerr << e.GetFile() << ":" << e.GetLine() << ":\n"
-              << e.GetDescription() << "\n";
+    std::cerr << e << std::endl;
     bestBaselineStatus = -1;
     }
-  catch(const std::exception& e)
+  catch(std::exception& e)
     {
     std::cerr << "ITK test driver caught an exception:\n";
     std::cerr << e.what() << "\n";
@@ -79,7 +91,7 @@ int main(int argc, char **argv)
     std::cerr << "ITK test driver caught an unknown exception!!!\n";
     bestBaselineStatus = -1;
     }
-  cout << bestBaselineStatus << endl;
+  std::cout << bestBaselineStatus << std::endl;
   return bestBaselineStatus;
 }
 
@@ -88,10 +100,10 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
                          int reportErrors, bool differences)
 {
   // Use the factory mechanism to read the test and baseline files and convert them to double
-  typedef itk::Image<double,ITK_TEST_DIMENSION_MAX> ImageType;
-  typedef itk::Image<unsigned char,ITK_TEST_DIMENSION_MAX> OutputType;
-  typedef itk::Image<unsigned char,2> DiffOutputType;
-  typedef itk::ImageFileReader<ImageType> ReaderType;
+  typedef itk::Image<double,ITK_TEST_DIMENSION_MAX>           ImageType;
+  typedef itk::Image<unsigned char,ITK_TEST_DIMENSION_MAX>    OutputType;
+  typedef itk::Image<unsigned char,2>                         DiffOutputType;
+  typedef itk::ImageFileReader<ImageType>                     ReaderType;
 
   // Read the baseline file
   ReaderType::Pointer baselineReader = ReaderType::New();
@@ -102,7 +114,7 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
     }
   catch (itk::ExceptionObject& e)
     {
-    std::cerr << "Exception detected while reading " << baselineImageFilename << " : "  << e.GetDescription();
+    std::cerr << "Exception detected while reading " << baselineImageFilename << " : "  << e;
     return 1000;
     }
 
@@ -115,7 +127,7 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
     }
   catch (itk::ExceptionObject& e)
     {
-    std::cerr << "Exception detected while reading " << testImageFilename << " : "  << e.GetDescription() << std::endl;
+    std::cerr << "Exception detected while reading " << testImageFilename << " : "  << e << std::endl;
     return 1000;
     }
 
@@ -136,8 +148,8 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
     }
 
   // Now compare the two images
-  typedef itk::Testing::ComparisonImageFilter<ImageType,ImageType> ComparisonFilterType;
-  ComparisonFilterType::Pointer diff = ComparisonFilterType::New();
+  typedef itk::Testing::ComparisonImageFilter<ImageType,ImageType> DiffType;
+  DiffType::Pointer diff = DiffType::New();
     diff->SetValidInput(baselineReader->GetOutput());
     diff->SetTestInput(testReader->GetOutput());
     diff->SetDifferenceThreshold(2.0);
@@ -148,18 +160,20 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
 
   if (reportErrors)
     {
-    typedef itk::RescaleIntensityImageFilter<ImageType,OutputType> RescaleType;
-    typedef itk::ExtractImageFilter<OutputType,DiffOutputType> ExtractType;
-    typedef itk::ImageFileWriter<DiffOutputType> WriterType;
-    typedef itk::ImageRegion<ITK_TEST_DIMENSION_MAX> RegionType;
+    typedef itk::RescaleIntensityImageFilter<ImageType,OutputType>    RescaleType;
+    typedef itk::ExtractImageFilter<OutputType,DiffOutputType>        ExtractType;
+    typedef itk::ImageFileWriter<DiffOutputType>                      WriterType;
+    typedef itk::ImageRegion<ITK_TEST_DIMENSION_MAX>                  RegionType;
+
     OutputType::IndexType index; index.Fill(0);
     OutputType::SizeType size; size.Fill(0);
 
     RescaleType::Pointer rescale = RescaleType::New();
-      rescale->SetOutputMinimum(itk::NumericTraits<unsigned char>::NonpositiveMin());
-      rescale->SetOutputMaximum(itk::NumericTraits<unsigned char>::max());
-      rescale->SetInput(diff->GetOutput());
-      rescale->UpdateLargestPossibleRegion();
+
+    rescale->SetOutputMinimum(itk::NumericTraits<unsigned char>::NonpositiveMin());
+    rescale->SetOutputMaximum(itk::NumericTraits<unsigned char>::max());
+    rescale->SetInput(diff->GetOutput());
+    rescale->UpdateLargestPossibleRegion();
 
     RegionType region;
     region.SetIndex(index);
@@ -172,11 +186,14 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
     region.SetSize(size);
 
     ExtractType::Pointer extract = ExtractType::New();
-      extract->SetInput(rescale->GetOutput());
-      extract->SetExtractionRegion(region);
+    extract->SetDirectionCollapseToSubmatrix();
+
+    extract->SetInput(rescale->GetOutput());
+    extract->SetExtractionRegion(region);
 
     WriterType::Pointer writer = WriterType::New();
-      writer->SetInput(extract->GetOutput());
+    writer->SetInput(extract->GetOutput());
+
     if(differences)
       {
       // if there are discrepencies, create an diff image
@@ -184,66 +201,92 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
       std::cout << status;
       std::cout <<  "</DartMeasurement>" << std::endl;
 
-      std::ostringstream diffName;
-        diffName << testImageFilename << ".diff.png";
+      itksys_ios::ostringstream diffName;
+      diffName << testImageFilename << ".diff.png";
       try
         {
         rescale->SetInput(diff->GetOutput());
         rescale->Update();
         }
-      catch (...)
+      catch(const itk::ExceptionObject& e)
         {
         std::cerr << "Error during rescale of " << diffName.str() << std::endl;
+        e.Print(std::cerr);
+        }
+      catch (...)
+        {
+        std::cerr << "Non-ITK Error during rescale of " << diffName.str() << std::endl;
         }
       writer->SetFileName(diffName.str().c_str());
       try
         {
         writer->Update();
         }
-      catch (...)
+      catch(const itk::ExceptionObject& e)
         {
         std::cerr << "Error during write of " << diffName.str() << std::endl;
+        e.Print(std::cerr);
+        }
+      catch (...)
+        {
+        std::cerr << "Non-ITK Error during write of " << diffName.str() << std::endl;
         }
 
       std::cout << "<DartMeasurementFile name=\"DifferenceImage\" type=\"image/png\">";
       std::cout << diffName.str();
       std::cout << "</DartMeasurementFile>" << std::endl;
       }
-    std::ostringstream baseName;
+    itksys_ios::ostringstream baseName;
     baseName << testImageFilename << ".base.png";
     try
       {
       rescale->SetInput(baselineReader->GetOutput());
       rescale->Update();
       }
-    catch (...)
+    catch(const itk::ExceptionObject& e)
       {
       std::cerr << "Error during rescale of " << baseName.str() << std::endl;
+      e.Print(std::cerr);
+      }
+    catch (...)
+      {
+      std::cerr << "Non-ITK Error during rescale of " << baseName.str() << std::endl;
       }
     try
       {
       writer->SetFileName(baseName.str().c_str());
       writer->Update();
       }
-    catch (...)
+    catch(const itk::ExceptionObject& e)
       {
       std::cerr << "Error during write of " << baseName.str() << std::endl;
+      e.Print(std::cerr);
+      }
+    catch (...)
+      {
+      std::cerr << "Non-ITK Error during write of " << baseName.str() << std::endl;
       }
 
     std::cout << "<DartMeasurementFile name=\"BaselineImage\" type=\"image/png\">";
     std::cout << baseName.str();
     std::cout << "</DartMeasurementFile>" << std::endl;
 
-    std::ostringstream testName;
+    itksys_ios::ostringstream testName;
     testName << testImageFilename << ".test.png";
     try
       {
       rescale->SetInput(testReader->GetOutput());
       rescale->Update();
       }
-    catch (...)
+    catch(const itk::ExceptionObject& e)
       {
       std::cerr << "Error during rescale of " << testName.str()
+                << std::endl;
+      e.Print(std::cerr);
+      }
+    catch (...)
+      {
+      std::cerr << "Non-ITK Error during rescale of " << testName.str()
                 << std::endl;
       }
     try
@@ -251,9 +294,14 @@ int RegressionTestImage (const char *testImageFilename, const char *baselineImag
       writer->SetFileName(testName.str().c_str());
       writer->Update();
       }
-    catch (...)
+    catch(const itk::ExceptionObject& e)
       {
       std::cerr << "Error during write of " << testName.str() << std::endl;
+      e.Print(std::cerr);
+      }
+    catch (...)
+      {
+      std::cerr << "Non-ITK Error during write of " << testName.str() << std::endl;
       }
 
     std::cout << "<DartMeasurementFile name=\"TestImage\" type=\"image/png\">";
